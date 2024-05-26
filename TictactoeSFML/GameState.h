@@ -17,6 +17,7 @@ private:
 	int grid[3][3];
 	bool turn;
 	bool highlighted;
+	std::string winner;
 
 public:
 	GameState(sf::RenderWindow* window);
@@ -26,5 +27,6 @@ public:
 	void updateEvent(const sf::Event& event);
 	void update();
 	void render(sf::RenderTarget* window);
+	bool changeState(std::stack<State*>* states);
 };
 

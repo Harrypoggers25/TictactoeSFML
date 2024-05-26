@@ -1,9 +1,24 @@
 #include "GameState.h"
+#include "WinState.h"
 #include <iostream>
 
 GameState::GameState(sf::RenderWindow* window) :
 	window(window)
 {
+	this->t = {
+		{"bg", new sf::Texture},
+		{"x", new sf::Texture},
+		{"o", new sf::Texture}
+	};
+	this->t["bg"]->loadFromFile("Images/bg.png");
+	this->t["x"]->loadFromFile("Images/x.png");
+	this->t["o"]->loadFromFile("Images/o.png");
+
+	this->bg = new sf::Sprite(*t["bg"]);
+	this->x = new sf::Sprite(*t["x"]);
+	this->o = new sf::Sprite(*t["o"]);
+
+	init();
 }
 
 GameState::~GameState()
@@ -21,22 +36,16 @@ GameState::~GameState()
 
 void GameState::init()
 {
-	this->t = {
-		{"bg", new sf::Texture},
-		{"x", new sf::Texture},
-		{"o", new sf::Texture}
-	};
-	this->t["bg"]->loadFromFile("Images/bg.png");
-	this->t["x"]->loadFromFile("Images/x.png");
-	this->t["o"]->loadFromFile("Images/o.png");
-
-	this->bg = new sf::Sprite(*t["bg"]);
-	this->x = new sf::Sprite(*t["x"]);
-	this->o = new sf::Sprite(*t["o"]);
 	this->ghost = new sf::Sprite(*t["x"]);
 
+	for (size_t i = 0; i < 3; i++) {
+		for (size_t j = 0; j < 3; j++) {
+			this->grid[i][j] = 0;
+		}
+	}
 	this->turn = false; // False = X, True = O
 	this->highlighted = false;
+	this->winner = "none";
 }
 
 void GameState::updateEvent(const sf::Event& event)
@@ -66,7 +75,9 @@ void GameState::updateEvent(const sf::Event& event)
 
 			auto checkWin = [](const int grid[3][3]) {
 				auto checkLine = [](const std::string& str) {
-					return str == "111" || str == "222";
+					if (str == "111") return "x";
+					else if (str == "222") return "o";
+					else return "none";
 				};
 
 				// Check vertical
@@ -75,7 +86,8 @@ void GameState::updateEvent(const sf::Event& event)
 						std::to_string(grid[0][j]) + 
 						std::to_string(grid[1][j]) + 
 						std::to_string(grid[2][j]);
-					if (checkLine(str)) return true;
+					std::string result = checkLine(str);
+					if (result != "none") return result;
 				}
 
 				// Check horizontal
@@ -84,7 +96,8 @@ void GameState::updateEvent(const sf::Event& event)
 						std::to_string(grid[i][0]) +
 						std::to_string(grid[i][1]) +
 						std::to_string(grid[i][2]);
-					if (checkLine(str)) return true;
+					std::string result = checkLine(str);
+					if (result != "none") return result;
 				}
 
 				// check diagonal
@@ -92,17 +105,29 @@ void GameState::updateEvent(const sf::Event& event)
 					std::to_string(grid[0][0]) +
 					std::to_string(grid[1][1]) +
 					std::to_string(grid[2][2]); // Down-right diagonal
-				if (checkLine(str)) return true;
+				std::string result = checkLine(str);
+				if (result != "none") return result;
 
 				str =
 					std::to_string(grid[2][0]) +
 					std::to_string(grid[1][1]) +
 					std::to_string(grid[0][2]); // Up-right diagonal
-				if (checkLine(str)) return true;
+				result = checkLine(str);
+				if (result != "none") return result;
 
-				return false;
+				// check draw
+				for (size_t i = 0; i < 3; i++) {
+					for (size_t j = 0; j < 3; j++) {
+						if (grid[i][j] == 0) return (std::string) "none";
+					}
+				}
+
+				return (std::string) "draw";
 			};
-			if (checkWin(this->grid)) std::cout << "win" << std::endl;
+			this->winner = checkWin(this->grid);
+			if (this->winner != "none") {
+				this->isChangedState = true;
+			}
 		}
 	}
 }
@@ -127,4 +152,11 @@ void GameState::render(sf::RenderTarget* window)
 		}
 	}
 	if (this->highlighted) window->draw(*this->ghost);
+}
+
+bool GameState::changeState(std::stack<State*>* states)
+{
+	states->push(new WinState(this, this->winner));
+
+	return false; // keep previous state
 }

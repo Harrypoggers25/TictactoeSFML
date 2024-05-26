@@ -26,8 +26,6 @@ void Game::init()
 	this->states = new std::stack<State*>;
 
 	this->states->push(new GameState(this->window));
-
-	if (!this->states->empty()) this->states->top()->init();
 }
 
 void Game::updateEvent()
@@ -41,7 +39,17 @@ void Game::updateEvent()
 
 void Game::update()
 {
-	if (!this->states->empty()) this->states->top()->update();
+	if (!this->states->empty()) {
+		this->states->top()->update();
+		if (this->states->top()->isChangedState) {
+			if (this->states->top()->changeState(this->states)) {
+				delete this->states->top();
+				this->states->pop();
+				this->states->top()->isChangedState = false;
+			}
+		}
+	}
+	
 }
 
 void Game::render()
